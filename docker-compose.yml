@@ -1,0 +1,31 @@
+version: "3"
+
+services:
+  psql:
+    image: postgres:alpine
+    environment:
+      POSTGRES_PASSWORD: digdag
+      POSTGRES_USER: digdag
+      POSTGRES_DB: digdag
+
+  digdag:
+    build:
+      context: digdag
+    ports:
+      - "65432:65432"
+    volumes:
+      - ./digdag/properties:/home/digdag/properties
+    command: bash -c -l 'digdag server -c ./properties/digdag.properties'
+    links:
+      - psql
+
+  gobqui:
+    image: golang:1.8
+    volumes:
+      - ~/src:/go/src
+    command: tail -f /dev/null
+    working_dir: /go/src/github.com/kazukgw/digdag-bq-ui/bqui
+    links:
+      - digdag
+    ports:
+      - "18080:8080"

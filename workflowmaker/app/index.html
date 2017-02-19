@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title></title>
+  <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Roboto:300,400,500,700,400italic">
+  <link rel="stylesheet" href="//fonts.googleapis.com/icon?family=Material+Icons">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vue-material/0.7.1/vue-material.css">
+  <style>
+.main { width: 100% }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="sidenav">
+      <!--
+      <md-sidenav class="md-left" ref="sidebar">
+        <md-toolbar>
+          <div class="md-toolbar-container">
+            <h3 class="md-title">Sidenav content</h3>
+          </div>
+        </md-toolbar>
+      </md-sidenav>
+      -->
+
+      <md-toolbar>
+        <div class="md-toolbar-container">
+          <!-- <md-button class="md-icon-button" @click.native="$refs.sidebar.toggle()">
+            <md-icon>menu</md-icon>
+          </md-button> -->
+          <h1 class="md-title">Digdag Workflow Maker</h1>
+        </div>
+      </md-toolbar>
+    <div>
+
+    <div class="main">
+      <md-layout md-gutter md-align="center">
+        <md-layout md-flex="85">
+          <h1>Workflow</h1>
+        </md-layout>
+
+        <md-layout v-if="!saved" md-flex="10" md-flex-offset="75">
+          <md-button class="md-raised md-primary"
+            @click.native="saveWorkflow()">Save</md-button>
+        </md-layout>
+        <md-layout v-else md-flex="20" md-flex-offset="65">
+          <md-button class="md-primary">Workflow already saved.</md-button>
+        </md-layout>
+
+        <md-layout md-flex="80">
+          <md-input-container>
+            <label>Workflow Name (e.g. my_first_workflow)</label>
+            <md-input v-model="workflow.name"></md-input>
+          </md-input-container>
+
+          <md-input-container>
+            <label>Description</label>
+            <md-textarea v-model="workflow.description"></md-textarea>
+          </md-input-container>
+
+          <md-layout md-flex="50">
+            <md-input-container>
+              <label>ScheduleType</label>
+              <md-select name="scheduleType" v-model="workflow.scheduleType">
+                <md-option value="daily">daily</md-option>
+                <md-option value="hourly">hourly</md-option>
+                <md-option value="weekly">weekly</md-option>
+                <md-option value="monthly">monthly</md-option>
+                <md-option value="minutes_interval">minutes_interval</md-option>
+                <md-option value="cron">cron</md-option>
+              </md-select>
+            </md-input-container>
+          </md-layout>
+          <md-layout md-flex="50">
+            <md-input-container>
+              <label>Schedule</label>
+              <md-input v-model="workflow.schedule"></md-input>
+            </md-input-container>
+          </md-layout>
+        </md-layout>
+      </md-layout>
+
+      <md-layout md-gutter md-align="center">
+        <md-layout md-flex="85">
+          <h2>Tasks</h2>
+        </md-layout>
+
+        <md-layout md-flex="80" v-for="(task, index) in workflow.tasks">
+          <md-layout md-flex="90">
+            <md-input-container>
+              <label>Task Name (e.g. my_first_task)</label>
+              <md-input v-model="task.name"></md-input>
+            </md-input-container>
+          </md-layout>
+          <md-layout md-flex="10">
+            <md-button class="md-accent" @click.native="deleteTaskWithIndex(index)">Delete</md-button>
+          </md-layout>
+
+          <md-layout md-flex="95" md-flex-offset="5">
+            <md-layout md-flex="45">
+              <md-input-container>
+                <label>Destination</label>
+                <md-input v-model="task.destination"></md-input>
+              </md-input-container>
+            </md-layout>
+
+            <md-layout md-flex="25">
+              <md-input-container>
+                <label>Create Disposition</label>
+                <md-select name="create-disposition" v-model="task.createDisposition">
+                  <md-option value="CREATE_IF_NEEDED">CREATE_IF_NEEDED</md-option>
+                  <md-option value="CREATE_NEVER">CREATE_NEVER</md-option>
+                </md-select>
+              </md-input-container>
+            </md-layout>
+
+            <md-layout md-flex="25">
+              <md-input-container>
+                <label>Write Disposition</label>
+                <md-select name="write-disposition" v-model="task.writeDisposition">
+                  <md-option value="WRITE_TRUNCATE">WRITE_TRUNCATE</md-option>
+                  <md-option value="WRITE_APPEND">WRITE_APPEND</md-option>
+                  <md-option value="WRITE_EMPTY">WRITE_EMPTY</md-option>
+                </md-select>
+              </md-input-container>
+            </md-layout>
+
+            <md-layout md-flex="95">
+              <md-input-container>
+                <label>SQL</label>
+                <md-textarea v-model="task.sql"></md-texarea>
+              </md-input-container>
+            </md-layout>
+          </md-layout>
+        </md-layout>
+        <md-layout md-flex="85">
+          <md-button class="md-raised md-primary" @click.native="addTask()">Add task</md-button>
+        <md-layout>
+      </md-layout>
+
+      <md-dialog ref="saveDialog">
+        <md-dialog-title v-if="saveStatus.saving">Saving ...</md-dialog-title>
+        <md-dialog-title v-else> {{saveStatus.result}}</md-dialog-title>
+          <md-dialog-content>
+            <md-layout md-flex="100" md-align="center">
+              <md-spinner v-show="saveStatus.saving" :md-size="150" md-indeterminate></md-spinner>
+            </md-layout>
+          </md-dialog-content>
+        <md-dialog-actions>
+          <md-button class="md-primary" @click.native="$refs.saveDialog.close()">OK</md-button>
+        </md-dialog-actions>
+      </md-dialog>
+
+      <md-dialog ref="notValidDialog">
+        <md-dialog-title>Workflow is not valid</md-dialog-title>
+        <md-dialog-content>Please correct.</md-dialog-content>
+        <md-dialog-actions>
+          <md-button class="md-primary" @click.native="$refs.notValidDialog.close()">OK</md-button>
+        </md-dialog-actions>
+      </md-dialog>
+
+      <md-dialog ref="messageDialog">
+        <md-dialog-title>Workflow aleady saved.</md-dialog-title>
+        <md-dialog-actions>
+          <md-button class="md-primary" @click.native="$refs.messageDialog.close()">OK</md-button>
+        </md-dialog-actions>
+      </md-dialog>
+
+    </div>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.1.10/vue.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue-material/0.7.1/vue-material.js"></script>
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,27 @@
+timezone: Asia/Tokyo
+
+schedule:
+  {{.WorkflowJson.ScheduleType}}>: {{.WorkflowJson.Schedule}}
+
+
+_export:
+  mail:
+    host: mailserver
+    port: 25
+    to: [example@example.example]
+    from: [digdag@digdag.digdag]
+
+_error:
+  mail:
+    data: |
+      Failed to run workflow.
+  bq:
+    credentials: {{.CredFile}}
+
+{{range .WorkflowJson.TasksJson}}
++{{.Name}}:
+  bq>: {{.Name}}.sql
+  destination_table: {{.Destination}}
+  create_disposition: {{.CreateDisposition}}
+  write_disposition: {{.WriteDisposition}}
+{{end}}
